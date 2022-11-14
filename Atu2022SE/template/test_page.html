@@ -1,0 +1,81 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test_page</title>
+    <script src="https://code.jquery.com/jquery-3.6.1.min.js"></script>
+</head>
+
+<body>
+    <h1>ChessGame!</h1>
+    <p id="side"></p>
+    <p id="my_side"></p>
+    <p id = "resultText"> </p><br>
+    <br>
+    <label for="new_move"></label><input id="new_move" value="new_move"/><br>
+    <button id="sendMove">OK</button><br>
+    <button id="red">red</button>
+    <button id="black">black</button>
+</body>
+    {% csrf_token %}
+<script type="text/javascript">
+    const red_party = 1;
+    const black_party = 0;
+    const my_turn = 1;
+    const wait_for = 0;
+
+    let game_id = 1;   //测试用，后面将会由匹配函数分配
+    let party;         //同样，此后会由匹配函数继续分配
+    let game_state;    //1表示走棋状态，0表示等待状态
+    let obj_red = $('#red');let obj_black = $('#black');
+    let obj_side = $('#side');
+    obj_red.click(function(){obj_side.text("red side");start(1)})  //红方
+    obj_black.click(function(){obj_side.text("black side");start(0)})   //黑方
+
+    function start(state) {  //开始
+        obj_red.unbind('click');obj_black.unbind('click');
+        party = game_state = state;//初始化
+
+        $('#sendMove').click(function () {
+            if(game_state === wait_for)
+                return;
+            let my_movement =$('#new_move').val();
+            $('#my_side').text('my movement:' + my_movement)
+            let ajaxSettings = {
+                url: '',
+                type: 'POST',
+                data: {
+                    csrfmiddlewaretoken: '{{ csrf_token }}',
+                    'game_state': game_state,
+                    'new_move': my_movement,
+                    'game_id': game_id,
+                    'party' : party,
+                }
+            }
+            $.ajax(ajaxSettings).done(function () {game_state = wait_for})
+        })
+        setInterval(polling_waiting,500);
+
+        function polling_waiting() { //轮询等待
+                if(game_state === my_turn)
+                    return;
+                let ajaxSettings = {
+                    url: '',
+                    type: 'POST',
+                    data: {
+                        csrfmiddlewaretoken: '{{ csrf_token }}',
+                        'game_state': game_state,
+                        'game_id': game_id,
+                        'party': party,
+                    },
+                }
+                $.ajax(ajaxSettings).done(function (args) {
+                    $('#resultText').text('other side movement:' + args)
+                    game_state = my_turn;
+                })
+            }
+    }
+</script>
+
+</html>
